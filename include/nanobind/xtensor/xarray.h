@@ -8,6 +8,12 @@ NAMESPACE_BEGIN(NB_NAMESPACE)
 NAMESPACE_BEGIN(detail)
 
 template <typename T>
+using xarray_view = xt::xarray_adaptor<
+    xt::xbuffer_adaptor<T*, xt::no_ownership, std::allocator<T>>,
+    xt::layout_type::dynamic,
+    std::vector<std::size_t>>;
+
+template <typename T>
 struct type_caster<xt::xarray<T>, enable_if_t<is_ndarray_scalar_v<T>>> {
     using NDArray = ndarray<T, numpy>;
     using Caster = make_caster<NDArray>;
@@ -67,6 +73,58 @@ private:
         }
 
         NDArray arr(ptr, nd, shape.data(), owner, strides.data());
+        return Caster::from_cpp(arr, policy, cl);
+    }
+};
+
+template <typename T>
+struct type_caster<xarray_view<T>, enable_if_t<is_ndarray_scalar_v<T>>> {
+    using View = xarray_view<T>;
+    using NDArray = ndarray<T, numpy>;
+    using Caster = make_caster<NDArray>;
+
+    static constexpr auto Name = Caster::Name;
+    template <typename T_> using Cast = View;
+    template <typename T_> static constexpr bool can_cast() { return true; }
+
+    Caster caster;
+    std::vector<size_t> shape_;
+    std::vector<std::ptrdiff_t> strides_;
+
+    bool from_python(handle src, uint8_t flags, cleanup_list *cl) noexcept {
+        if (!caster.from_python(src, flags & ~(uint8_t)cast_flags::convert, cl))
+            return false;
+
+        const NDArray &a = caster.value;
+        size_t nd = a.ndim();
+        shape_.resize(nd);
+        strides_.resize(nd);
+        for (size_t i = 0; i < nd; ++i) {
+            shape_[i] = a.shape(i);
+            strides_[i] = static_cast<std::ptrdiff_t>(a.stride(i));
+        }
+        return true;
+    }
+
+    operator View() {
+        NDArray &a = caster.value;
+        return xt::adapt(static_cast<T*>(a.data()), a.size(),
+                         xt::no_ownership(), shape_, strides_);
+    }
+
+    template <typename T_>
+    static handle from_cpp(T_ &&v, rv_policy policy, cleanup_list *cl) noexcept {
+        size_t nd = v.dimension();
+        std::vector<size_t> shape(nd);
+        std::vector<int64_t> strides(nd);
+        for (size_t i = 0; i < nd; ++i) {
+            shape[i] = v.shape()[i];
+            strides[i] = static_cast<int64_t>(v.strides()[i]);
+        }
+        NDArray arr((void *) v.data(),
+                    nd, shape.data(), handle(), strides.data());
+        if (policy == rv_policy::automatic || policy == rv_policy::automatic_reference)
+            policy = rv_policy::reference;
         return Caster::from_cpp(arr, policy, cl);
     }
 };

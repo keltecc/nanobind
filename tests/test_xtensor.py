@@ -21,3 +21,16 @@ def test_funcs():
 def test_scalar():
     a = np.array([1.0, 2.0, 3.0])
     assert_array_equal(t.test_scalar(a, 2.0, 3.0), a * 2.0 + 3.0)
+
+def test_view():
+    a = np.array([1.0, 2.0, 3.0])
+    assert_array_almost_equal(t.test_view(a, 2.0, 3.0), np.sin(a) * 2.0 + 3.0, decimal=10)
+    assert_array_equal(a, np.array([1.0, 2.0, 3.0]))
+
+def test_view_zerocopy():
+    a = np.array([1.0, 2.0, 3.0])
+    b = t.test_view_zerocopy(a)
+    a[0] = 1234.0
+    assert_array_equal(a, b)
+    b[0] = 5678.0
+    assert_array_equal(a, b)
