@@ -12,7 +12,7 @@ NB_MODULE(test_xtensor_ext, m) {
         return xt::sin(a) + xt::cos(b);
     });
 
-    m.def("test_scalar", [](const xt::xarray<double>& a, double s, double t) -> xt::xarray<double> {
+    m.def("test_scalar", [](const xt::xarray<double>& a, double s, double t) {
         return a * s + t;
     });
 
