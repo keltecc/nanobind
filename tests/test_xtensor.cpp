@@ -15,4 +15,12 @@ NB_MODULE(test_xtensor_ext, m) {
     m.def("test_scalar", [](const xt::xarray<double>& a, double s, double t) -> xt::xarray<double> {
         return a * s + t;
     });
+
+    m.def("test_view", [](const nb::detail::xarray_view<double>& a, double s, double t) {
+        return xt::sin(a) * s + t;
+    });
+
+    m.def("test_view_zerocopy", [](const nb::detail::xarray_view<double>& a) {
+        return a;
+    });
 }
