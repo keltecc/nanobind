@@ -169,4 +169,34 @@ NB_MODULE(test_xtensor_ext, m) {
     m.def("test_xtensor_view_type_overload", [](const nb::xtensor_view<float, 2>& a) {
         return 3 * a;
     });
+
+    // --- column_major owning types ---
+
+    m.def("test_xarray_column_major_owning", [](const xt::xarray<double, xt::layout_type::column_major>& a) {
+        return a * 2.0;
+    });
+
+    m.def("test_xarray_column_major_return", []() {
+        xt::xarray<double, xt::layout_type::column_major> a = {{1.0, 2.0}, {3.0, 4.0}};
+        return a;
+    });
+
+    m.def("test_xtensor_column_major_owning", [](const xt::xtensor<double, 2, xt::layout_type::column_major>& a) {
+        return a * 2.0;
+    });
+
+    m.def("test_xtensor_column_major_return", []() {
+        xt::xtensor<double, 2, xt::layout_type::column_major> a = {{1.0, 2.0}, {3.0, 4.0}};
+        return a;
+    });
+
+    // --- custom allocator owning types ---
+
+    m.def("test_xarray_custom_allocator", [](const xt::xarray<double, xt::layout_type::row_major, std::allocator<double>>& a) {
+        return a * 2.0;
+    });
+
+    m.def("test_xtensor_custom_allocator", [](const xt::xtensor<double, 2, xt::layout_type::row_major, std::allocator<double>>& a) {
+        return a * 2.0;
+    });
 }

@@ -336,5 +336,49 @@ def test_xtensor_view_type_overload():
     assert_array_equal(t.test_xtensor_view_type_overload(a), 2 * a)
     assert_array_equal(t.test_xtensor_view_type_overload(b), 3 * a)
 
-# xarray<double>, xarray<double, другой layout>, проверить что матрица не транспонируется
-# xarray<double, column_major>
+def test_xarray_column_major_owning_c_order():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]])
+    assert a.flags["C_CONTIGUOUS"]
+    result = t.test_xarray_column_major_owning(a)
+    assert_array_equal(result, a * 2.0)
+
+
+def test_xarray_column_major_owning_f_order():
+    a = np.asfortranarray(np.array([[1.0, 2.0], [3.0, 4.0]]))
+    assert a.flags["F_CONTIGUOUS"]
+    result = t.test_xarray_column_major_owning(a)
+    assert_array_equal(result, a * 2.0)
+
+
+def test_xarray_column_major_return():
+    result = t.test_xarray_column_major_return()
+    assert_array_equal(result, [[1.0, 2.0], [3.0, 4.0]])
+
+
+def test_xtensor_column_major_owning_c_order():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]])
+    assert a.flags["C_CONTIGUOUS"]
+    result = t.test_xtensor_column_major_owning(a)
+    assert_array_equal(result, a * 2.0)
+
+
+def test_xtensor_column_major_owning_f_order():
+    a = np.asfortranarray(np.array([[1.0, 2.0], [3.0, 4.0]]))
+    assert a.flags["F_CONTIGUOUS"]
+    result = t.test_xtensor_column_major_owning(a)
+    assert_array_equal(result, a * 2.0)
+
+
+def test_xtensor_column_major_return():
+    result = t.test_xtensor_column_major_return()
+    assert_array_equal(result, [[1.0, 2.0], [3.0, 4.0]])
+
+
+def test_xarray_custom_allocator():
+    a = np.array([1.0, 2.0, 3.0])
+    assert_array_equal(t.test_xarray_custom_allocator(a), a * 2.0)
+
+
+def test_xtensor_custom_allocator():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]])
+    assert_array_equal(t.test_xtensor_custom_allocator(a), a * 2.0)

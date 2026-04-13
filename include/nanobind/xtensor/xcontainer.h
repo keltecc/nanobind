@@ -76,13 +76,15 @@ private:
     }
 };
 
-template <typename T>
-struct type_caster<xt::xarray<T>, enable_if_t<is_ndarray_scalar_v<T>>>
-    : xcontainer_caster<xt::xarray<T>> {};
+template <typename EC, xt::layout_type L, typename SC, typename Tag>
+struct type_caster<xt::xarray_container<EC, L, SC, Tag>,
+    enable_if_t<is_ndarray_scalar_v<typename EC::value_type>>>
+    : xcontainer_caster<xt::xarray_container<EC, L, SC, Tag>> {};
 
-template <typename T, std::size_t N>
-struct type_caster<xt::xtensor<T, N>, enable_if_t<is_ndarray_scalar_v<T>>>
-    : xcontainer_caster<xt::xtensor<T, N>> {};
+template <typename EC, std::size_t N, xt::layout_type L, typename Tag>
+struct type_caster<xt::xtensor_container<EC, N, L, Tag>,
+    enable_if_t<is_ndarray_scalar_v<typename EC::value_type>>>
+    : xcontainer_caster<xt::xtensor_container<EC, N, L, Tag>> {};
 
 NAMESPACE_END(detail)
 NAMESPACE_END(NB_NAMESPACE)

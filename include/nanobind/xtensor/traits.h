@@ -34,22 +34,24 @@ using xtensor_view = xt::xtensor_adaptor<
     N,
     xt::layout_type::dynamic>;
 
-template <typename T> struct xcaster_traits<xt::xarray<T>> {
-    using scalar_type = T;
+template <typename EC, xt::layout_type L, typename SC, typename Tag>
+struct xcaster_traits<xt::xarray_container<EC, L, SC, Tag>> {
+    using scalar_type = typename EC::value_type;
     using shape_type = std::vector<size_t>;
     using stride_type = std::vector<int64_t>;
-    using view_type = xarray_view<T>;
+    using view_type = xarray_view<scalar_type>;
 
     static bool check_ndim(size_t) { return true; }
     static shape_type make_shape(size_t nd) { return shape_type(nd); }
     static stride_type make_strides(size_t nd) { return stride_type(nd); }
 };
 
-template <typename T, std::size_t N> struct xcaster_traits<xt::xtensor<T, N>> {
-    using scalar_type = T;
+template <typename EC, std::size_t N, xt::layout_type L, typename Tag>
+struct xcaster_traits<xt::xtensor_container<EC, N, L, Tag>> {
+    using scalar_type = typename EC::value_type;
     using shape_type = std::array<size_t, N>;
     using stride_type = std::array<int64_t, N>;
-    using view_type = xtensor_view<T, N>;
+    using view_type = xtensor_view<scalar_type, N>;
 
     static bool check_ndim(size_t nd) { return nd == N; }
     static shape_type make_shape(size_t) { return {}; }
