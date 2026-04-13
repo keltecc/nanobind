@@ -1,6 +1,7 @@
 #include <complex>
 #include <nanobind/nanobind.h>
 #include <nanobind/xtensor.h>
+#include <xtensor/core/xlayout.hpp>
 
 using complex_t = std::complex<double>;
 
@@ -119,5 +120,53 @@ NB_MODULE(test_xtensor_ext, m) {
 
     m.def("test_template_view_func", [](const nb::xarray_view<double>& a) {
         return array_multiply(a);
+    });
+
+    m.def("test_xarray_dynamic_type", [](const xt::xarray<double>& a) {
+        return a;
+    });
+
+    m.def("test_xtensor_dynamic_type", [](const xt::xtensor<double, 2>& a) {
+        return a;
+    });
+
+    m.def("test_xarray_view_strict_type", [](const nb::xarray_view<double>& a) {
+        return a;
+    });
+
+    m.def("test_xtensor_view_strict_type", [](const nb::xarray_view<double>& a) {
+        return a;
+    });
+
+    m.def("test_xarray_type_overload", [](const xt::xarray<double>& a) {
+        return 2 * a;
+    });
+
+    m.def("test_xarray_type_overload", [](const xt::xarray<float>& a) {
+        return 3 * a;
+    });
+
+    m.def("test_xarray_view_type_overload", [](const nb::xarray_view<double>& a) {
+        return 2 * a;
+    });
+
+    m.def("test_xarray_view_type_overload", [](const nb::xarray_view<float>& a) {
+        return 3 * a;
+    });
+
+    m.def("test_xtensor_type_overload", [](const xt::xtensor<double, 2>& a) {
+        return 2 * a;
+    });
+
+    m.def("test_xtensor_type_overload", [](const xt::xtensor<float, 2>& a) {
+        return 3 * a;
+    });
+
+    m.def("test_xtensor_view_type_overload", [](const nb::xtensor_view<double, 2>& a) {
+        return 2 * a;
+    });
+
+    m.def("test_xtensor_view_type_overload", [](const nb::xtensor_view<float, 2>& a) {
+        return 3 * a;
     });
 }

@@ -20,6 +20,11 @@ def test_xarray_scalar():
     assert_array_equal(t.test_xarray_scalar(a, 2.0, 3.0), a * 2.0 + 3.0)
 
 
+def test_xarray_scalar_inverse_order():
+    a = np.array([1.0, 2.0, 3.0])
+    assert_array_equal(t.test_xarray_scalar(a[::-1], 2.0, 3.0), a[::-1] * 2.0 + 3.0)
+
+
 def test_xarray_return_by_value():
     result = t.test_xarray_return_by_value()
     assert_array_equal(result, [1.0, 2.0, 3.0])
@@ -46,6 +51,13 @@ def test_xarray_view():
     a = np.array([1.0, 2.0, 3.0])
     assert_array_almost_equal(
         t.test_xarray_view(a, 2.0, 3.0), np.sin(a) * 2.0 + 3.0,
+    )
+
+
+def test_xarray_view_inverse_order():
+    a = np.array([1.0, 2.0, 3.0])
+    assert_array_almost_equal(
+        t.test_xarray_view(a[::-1], 2.0, 3.0), np.sin(a[::-1]) * 2.0 + 3.0,
     )
 
 
@@ -79,6 +91,11 @@ def test_xtensor_funcs():
 def test_xtensor_scalar():
     a = np.array([[1.0, 2.0], [3.0, 4.0]])
     assert_array_equal(t.test_xtensor_scalar(a, 2.0, 3.0), a * 2.0 + 3.0)
+
+
+def test_xtensor_scalar_inverse_order():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]])
+    assert_array_equal(t.test_xtensor_scalar(a[::-1], 2.0, 3.0), a[::-1] * 2.0 + 3.0)
 
 
 def test_xtensor_wrong_ndim():
@@ -117,6 +134,13 @@ def test_xtensor_view():
     a = np.array([[1.0, 2.0], [3.0, 4.0]])
     assert_array_almost_equal(
         t.test_xtensor_view(a, 2.0, 3.0), np.sin(a) * 2.0 + 3.0,
+    )
+
+
+def test_xtensor_view_inverse_order():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]])
+    assert_array_almost_equal(
+        t.test_xtensor_view(a[::-1], 2.0, 3.0), np.sin(a[::-1]) * 2.0 + 3.0,
     )
 
 
@@ -175,6 +199,34 @@ def test_template_func():
 def test_template_view_func():
     a = np.array([1.0, 2.0, 3.0])
     assert_array_equal(t.test_template_view_func(a), a * 1234.0)
+
+
+def test_xarray_dynamic_type():
+    a = np.array([1.0, 2.0, 3.0], dtype = np.float32)
+    assert_array_equal(t.test_xarray_dynamic_type(a), a)
+
+
+def test_xtensor_dynamic_type():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]], dtype = np.float32)
+    assert_array_equal(t.test_xtensor_dynamic_type(a), a)
+
+
+def test_xarray_view_strict_type():
+    a = np.array([1.0, 2.0, 3.0], dtype = np.float32)
+    try:
+        t.test_xarray_view_strict_type(a)
+        assert False, "should raise TypeError"
+    except TypeError:
+        pass
+
+
+def test_xtensor_view_strict_type():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]], dtype = np.float32)
+    try:
+        t.test_xtensor_view_strict_type(a)
+        assert False, "should raise TypeError"
+    except TypeError:
+        pass
 
 
 def test_xarray_non_contiguous():
@@ -255,3 +307,34 @@ def test_xtensor_view_type_mismatch():
         assert False, "should raise TypeError"
     except TypeError:
         pass
+
+
+def test_xarray_type_overload():
+    a = np.array([1.0, 2.0, 3.0, 4.0], dtype = np.float64)
+    b = np.array([1.0, 2.0, 3.0, 4.0], dtype = np.float32)
+    assert_array_equal(t.test_xarray_type_overload(a), 2 * a)
+    assert_array_equal(t.test_xarray_type_overload(b), 3 * a)
+
+
+def test_xarray_view_type_overload():
+    a = np.array([1.0, 2.0, 3.0, 4.0], dtype = np.float64)
+    b = np.array([1.0, 2.0, 3.0, 4.0], dtype = np.float32)
+    assert_array_equal(t.test_xarray_view_type_overload(a), 2 * a)
+    assert_array_equal(t.test_xarray_view_type_overload(b), 3 * a)
+
+
+def test_xtensor_type_overload():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]], dtype = np.float64)
+    b = np.array([[1.0, 2.0], [3.0, 4.0]], dtype = np.float32)
+    assert_array_equal(t.test_xtensor_type_overload(a), 2 * a)
+    assert_array_equal(t.test_xtensor_type_overload(b), 3 * a)
+
+
+def test_xtensor_view_type_overload():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]], dtype = np.float64)
+    b = np.array([[1.0, 2.0], [3.0, 4.0]], dtype = np.float32)
+    assert_array_equal(t.test_xtensor_view_type_overload(a), 2 * a)
+    assert_array_equal(t.test_xtensor_view_type_overload(b), 3 * a)
+
+# xarray<double>, xarray<double, другой layout>, проверить что матрица не транспонируется
+# xarray<double, column_major>

@@ -37,9 +37,7 @@ inline xvectorizer<F, R, Args...> xvectorize(F&& f, R (*)(Args...)) {
 }
 
 template <class F>
-inline auto xvectorize(F&& f)
-    -> decltype(xvectorize(std::forward<F>(f),
-                           (detail::get_function_type<F>*) nullptr)) {
+inline auto xvectorize(F&& f) {
     return xvectorize(std::forward<F>(f),
                       (detail::get_function_type<F>*) nullptr);
 }
