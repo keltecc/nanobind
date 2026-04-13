@@ -10,5 +10,5 @@
       XTENSOR_VERSION_PATCH >= (patch)))
 #endif
 
-static_assert(NB_XTENSOR_VERSION_AT_LEAST(0, 27, 1),
-              "xtensor support in nanobind requires xtensor >= 0.27.1");
+static_assert(NB_XTENSOR_VERSION_AT_LEAST(0, 26, 0),
+              "xtensor support in nanobind requires xtensor >= 0.26.0");
