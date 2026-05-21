@@ -9,11 +9,16 @@ try:
 except:
     needs_numpy_and_xtensor = pytest.mark.skip(reason="NumPy and xtensor are required")
 
-# xt::xarray<> tests
+# xt::xarray tests
 
 @needs_numpy_and_xtensor
 def test_xarray():
     a = np.array([1.0, 2.0, 3.0])
+    assert_array_almost_equal(t.test_xarray(a, 2.0, 3.0), np.sin(a) * 2.0 + 3.0)
+
+@needs_numpy_and_xtensor
+def test_xarray_accepts_2d():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]])
     assert_array_almost_equal(t.test_xarray(a, 2.0, 3.0), np.sin(a) * 2.0 + 3.0)
 
 @needs_numpy_and_xtensor
@@ -85,8 +90,70 @@ def test_xarray_complex():
     b = np.array([5 + 6j, 7 + 8j])
     assert_array_equal(t.test_xarray_complex(a, b), a + b)
 
+@needs_numpy_and_xtensor
+def test_xarray_row_major_noconvert_accepts_column_major():
+    a = np.asfortranarray(np.array([1.0, 2.0, 3.0, 4.0]))
+    assert a.flags["F_CONTIGUOUS"]
+    assert_array_equal(t.test_xarray_row_major_noconvert(a), a * 2.0)
 
-# xt::xtensor<> tests
+@needs_numpy_and_xtensor
+def test_xarray_row_major_noconvert_rejects_non_contiguous():
+    a = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    b = a[::2]
+    try:
+        t.test_xarray_row_major_noconvert(b)
+        assert False, "should raise TypeError"
+    except TypeError:
+        pass
+
+@needs_numpy_and_xtensor
+def test_xarray_column_major_noconvert_accepts_row_major():
+    a = np.array([1.0, 2.0, 3.0, 4.0])
+    assert a.flags["C_CONTIGUOUS"]
+    assert_array_equal(t.test_xarray_column_major_noconvert(a), a * 2.0)
+
+@needs_numpy_and_xtensor
+def test_xarray_column_major_noconvert_rejects_non_contiguous():
+    a = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    b = a[::2]
+    try:
+        t.test_xarray_column_major_noconvert(b)
+        assert False, "should raise TypeError"
+    except TypeError:
+        pass
+
+@needs_numpy_and_xtensor
+def test_xarray_dynamic_noconvert_accepts_row_major():
+    a = np.array([1.0, 2.0, 3.0, 4.0])
+    assert_array_equal(t.test_xarray_dynamic_noconvert(a), a * 2.0)
+
+@needs_numpy_and_xtensor
+def test_xarray_dynamic_noconvert_accepts_column_major():
+    a = np.asfortranarray(np.array([1.0, 2.0, 3.0, 4.0]))
+    assert_array_equal(t.test_xarray_dynamic_noconvert(a), a * 2.0)
+
+@needs_numpy_and_xtensor
+def test_xarray_dynamic_noconvert_accepts_non_contiguous():
+    a = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    b = a[::2]
+    assert_array_equal(t.test_xarray_dynamic_noconvert(b), b * 2.0)
+
+@needs_numpy_and_xtensor
+def test_xarray_return_column_major():
+    out = t.test_xarray_return_column_major()
+    assert out.flags["F_CONTIGUOUS"]
+    assert_array_equal(out, [1.0, 2.0, 3.0, 4.0])
+
+@needs_numpy_and_xtensor
+def test_xarray_mixed_layouts():
+    a = np.array([1.0, 2.0, 3.0, 4.0])
+    assert a.flags["C_CONTIGUOUS"]
+    out = t.test_xarray_mixed_layouts(a)
+    assert out.flags["F_CONTIGUOUS"]
+    assert_array_equal(out, a)
+
+
+# xt::xtensor tests
 
 @needs_numpy_and_xtensor
 def test_xtensor():
@@ -171,12 +238,98 @@ def test_xtensor_complex():
     b = np.array([[5 + 5j, 6 + 6j], [7 + 7j, 8 + 8j]])
     assert_array_equal(t.test_xtensor_complex(a, b), a + b)
 
+@needs_numpy_and_xtensor
+def test_xtensor_row_major_noconvert_1d():
+    a = np.asfortranarray(np.array([1.0, 2.0, 3.0, 4.0]))
+    assert a.flags["F_CONTIGUOUS"]
+    assert_array_equal(t.test_xtensor_row_major_noconvert_1d(a), a * 2.0)
 
-# nb::xarray_view<> tests
+@needs_numpy_and_xtensor
+def test_xtensor_column_major_noconvert_1d():
+    a = np.array([1.0, 2.0, 3.0, 4.0])
+    assert a.flags["C_CONTIGUOUS"]
+    assert_array_equal(t.test_xtensor_column_major_noconvert_1d(a), a * 2.0)
+
+@needs_numpy_and_xtensor
+def test_xtensor_row_major_noconvert_rejects_column_major():
+    a = np.asfortranarray(np.array([[1.0, 2.0], [3.0, 4.0]]))
+    assert a.flags["F_CONTIGUOUS"]
+    try:
+        t.test_xtensor_row_major_noconvert(a)
+        assert False, "should raise TypeError"
+    except TypeError:
+        pass
+
+@needs_numpy_and_xtensor
+def test_xtensor_row_major_noconvert_rejects_non_contiguous():
+    a = np.arange(16.0).reshape(4, 4)
+    b = a[::2, ::2]
+    try:
+        t.test_xtensor_row_major_noconvert(b)
+        assert False, "should raise TypeError"
+    except TypeError:
+        pass
+
+@needs_numpy_and_xtensor
+def test_xtensor_column_major_noconvert_rejects_row_major():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]])
+    assert a.flags["C_CONTIGUOUS"]
+    try:
+        t.test_xtensor_column_major_noconvert(a)
+        assert False, "should raise TypeError"
+    except TypeError:
+        pass
+
+@needs_numpy_and_xtensor
+def test_xtensor_column_major_noconvert_rejects_non_contiguous():
+    a = np.arange(16.0).reshape(4, 4)
+    b = a[::2, ::2]
+    try:
+        t.test_xtensor_column_major_noconvert(b)
+        assert False, "should raise TypeError"
+    except TypeError:
+        pass
+
+@needs_numpy_and_xtensor
+def test_xtensor_dynamic_noconvert_accepts_row_major():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]])
+    assert_array_equal(t.test_xtensor_dynamic_noconvert(a), a * 2.0)
+
+@needs_numpy_and_xtensor
+def test_xtensor_dynamic_noconvert_accepts_column_major():
+    a = np.asfortranarray(np.array([[1.0, 2.0], [3.0, 4.0]]))
+    assert_array_equal(t.test_xtensor_dynamic_noconvert(a), a * 2.0)
+
+@needs_numpy_and_xtensor
+def test_xtensor_dynamic_noconvert_accepts_non_contiguous():
+    a = np.arange(16.0).reshape(4, 4)
+    b = a[::2, ::2]
+    assert_array_equal(t.test_xtensor_dynamic_noconvert(b), b * 2.0)
+
+@needs_numpy_and_xtensor
+def test_xtensor_return_column_major():
+    out = t.test_xtensor_return_column_major()
+    assert out.flags["F_CONTIGUOUS"]
+    assert_array_equal(out, [[1.0, 2.0], [3.0, 4.0]])
+
+@needs_numpy_and_xtensor
+def test_xtensor_mixed_layouts():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]])
+    assert a.flags["C_CONTIGUOUS"]
+    out = t.test_xtensor_mixed_layouts(a)
+    assert out.flags["F_CONTIGUOUS"]
+    assert_array_equal(out, a)
+
+# nb::xarray_view tests
 
 @needs_numpy_and_xtensor
 def test_xarray_view():
     a = np.array([1.0, 2.0, 3.0])
+    assert_array_almost_equal(t.test_xarray_view(a, 2.0, 3.0), np.sin(a) * 2.0 + 3.0)
+
+@needs_numpy_and_xtensor
+def test_xarray_view_accepts_2d():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]])
     assert_array_almost_equal(t.test_xarray_view(a, 2.0, 3.0), np.sin(a) * 2.0 + 3.0)
 
 @needs_numpy_and_xtensor
@@ -186,14 +339,26 @@ def test_xarray_view_row_major_accepts_column_major_1d():
     assert_array_almost_equal(t.test_xarray_view(a, 2.0, 3.0), np.sin(a) * 2.0 + 3.0)
 
 @needs_numpy_and_xtensor
-def test_xarray_view_rejects_non_contiguous():
+def test_xarray_view_default_accepts_non_contiguous():
+    a = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    b = a[::-2]
+    assert_array_almost_equal(t.test_xarray_view(b, 2.0, 3.0), np.sin(b) * 2.0 + 3.0)
+
+@needs_numpy_and_xtensor
+def test_xarray_view_row_major_rejects_non_contiguous():
     a = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
     b = a[::-2]
     try:
-        t.test_xarray_view(b, 2.0, 3.0)
+        t.test_xarray_view_row_major(b, 2.0, 3.0)
         assert False, "should raise TypeError"
     except TypeError:
         pass
+
+@needs_numpy_and_xtensor
+def test_xarray_view_row_major_accepts_row_major():
+    a = np.array([1.0, 2.0, 3.0])
+    assert a.flags["C_CONTIGUOUS"]
+    assert_array_almost_equal(t.test_xarray_view_row_major(a, 2.0, 3.0), np.sin(a) * 2.0 + 3.0)
 
 @needs_numpy_and_xtensor
 def test_xarray_view_column_major():
@@ -267,7 +432,7 @@ def test_xarray_view_complex():
     assert_array_equal(t.test_xarray_view_complex(a), a + (1 + 1j))
 
 
-# nb::xtensor_view<> tests
+# nb::xtensor_view tests
 
 @needs_numpy_and_xtensor
 def test_xtensor_view():
@@ -284,14 +449,26 @@ def test_xtensor_view_wrong_dimension():
         pass
 
 @needs_numpy_and_xtensor
+def test_xtensor_view_default_accepts_column_major():
+    a = np.asfortranarray(np.array([[1.0, 2.0], [3.0, 4.0]]))
+    assert a.flags["F_CONTIGUOUS"]
+    assert_array_almost_equal(t.test_xtensor_view(a, 2.0, 3.0), np.sin(a) * 2.0 + 3.0)
+
+@needs_numpy_and_xtensor
 def test_xtensor_view_row_major_rejects_column_major():
     a = np.asfortranarray(np.array([[1.0, 2.0], [3.0, 4.0]]))
     assert a.flags["F_CONTIGUOUS"]
     try:
-        t.test_xtensor_view(a, 2.0, 3.0)
+        t.test_xtensor_view_row_major(a, 2.0, 3.0)
         assert False, "should raise TypeError"
     except TypeError:
         pass
+
+@needs_numpy_and_xtensor
+def test_xtensor_view_row_major_accepts_row_major():
+    a = np.array([[1.0, 2.0], [3.0, 4.0]])
+    assert a.flags["C_CONTIGUOUS"]
+    assert_array_almost_equal(t.test_xtensor_view_row_major(a, 2.0, 3.0), np.sin(a) * 2.0 + 3.0)
 
 @needs_numpy_and_xtensor
 def test_xtensor_view_column_major():
@@ -381,6 +558,24 @@ def test_vectorize():
 def test_vectorize_lambda():
     a = np.array([1.0, 2.0, 3.0])
     assert_array_almost_equal(t.test_vectorize_lambda(a), np.sin(a))
+
+
+# strided_view + adaptor tests
+
+@needs_numpy_and_xtensor
+def test_strided_view_return():
+    out = t.test_strided_view_return()
+    assert_array_equal(out, [10.0, 30.0])
+
+@needs_numpy_and_xtensor
+def test_xarray_adaptor_return():
+    out = t.test_xarray_adaptor_return()
+    assert_array_equal(out, [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+
+@needs_numpy_and_xtensor
+def test_xtensor_adaptor_return():
+    out = t.test_xtensor_adaptor_return()
+    assert_array_equal(out, [[10.0, 20.0], [30.0, 40.0]])
 
 
 # reference_internal tests

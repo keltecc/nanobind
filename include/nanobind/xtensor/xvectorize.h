@@ -21,6 +21,8 @@ struct xvectorizer {
     xvectorizer(F&& func)
         : m_vectorizer(std::forward<F>(func)) {}
 
+    /// We use view to preserve zero-copy behaviour.
+    /// The const modifier rejects the modification of the source array.
     auto operator()(const xarray_view<Args>&... args) const {
         return m_vectorizer(args...);
     }

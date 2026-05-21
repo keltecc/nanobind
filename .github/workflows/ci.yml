@@ -45,7 +45,7 @@ jobs:
       run: sudo apt-get -y install libeigen3-dev
 
     # ubuntu packages xtensor-dev and xtl-dev are outdated
-    # so we will install them from sources    
+    # so we will install them from sources
     - name: Install xtensor and xtl
       if: matrix.os == 'ubuntu-latest'
       run: |

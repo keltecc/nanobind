@@ -53,9 +53,12 @@ container owns its memory independently of the Python object.
        return arr;
    });
 
-The owning caster supports implicit type conversion: if the NumPy array has a
-different dtype (e.g., ``float32`` when ``double`` is expected), nanobind will
-convert it automatically. This can be disabled with ``nb::arg().noconvert()``.
+The owning caster supports implicit conversion at two levels: if the NumPy
+array has a different dtype (e.g., ``float32`` when ``double`` is expected),
+nanobind will convert it automatically. For containers with a strict layout
+(e.g., ``row_major``), a non-matching memory order is also reordered during
+the copy. Both can be disabled with ``nb::arg().noconvert()``, which rejects
+dtype or layout mismatches with a ``TypeError``.
 
 C++ → Python
 ^^^^^^^^^^^^^
@@ -205,29 +208,25 @@ Non-owning views
 ^^^^^^^^^^^^^^^^
 
 View types accept an optional layout template parameter that defaults to
-``XTENSOR_DEFAULT_LAYOUT`` (typically ``row_major``). This layout is set at
-**compile time** and enables xtensor's fast flat-pointer iteration instead of
-slower stride-based stepping.
-
-By default, views only accept arrays whose memory layout matches the
-compile-time layout parameter. Passing a non-matching array raises a
-``TypeError``:
+``xt::layout_type::dynamic``. The layout determines how xtensor iterates over
+the data:
 
 .. code-block:: cpp
 
-   // Default (row_major), only accepts C-contiguous arrays
-   m.def("fast_sum", [](const nb::xarray_view<double>& a) {
+   // Default (dynamic), accepts any array including non-contiguous slices.
+   // Detects the actual memory layout to enable optimizations when contiguous.
+   m.def("any_sum", [](const nb::xarray_view<double>& a) {
        return xt::sum(a)();
    });
 
-   // Explicit column_major, only accepts Fortran-contiguous arrays
+   // Row-major, only accepts C-contiguous arrays. Enables fast flat-pointer
+   // iteration since the layout is known at compile time.
+   m.def("fast_sum", [](const nb::xarray_view<double, xt::layout_type::row_major>& a) {
+       return xt::sum(a)();
+   });
+
+   // Column-major, only accepts Fortran-contiguous arrays.
    m.def("fortran_sum", [](const nb::xarray_view<double, xt::layout_type::column_major>& a) {
-       return xt::sum(a)();
-   });
-
-   // Dynamic layout, accepts any layout (including non-contiguous slices),
-   // but iteration uses the slower stride-based path
-   m.def("any_sum", [](const nb::xarray_view<double, xt::layout_type::dynamic>& a) {
        return xt::sum(a)();
    });
 
@@ -235,8 +234,13 @@ The same applies to ``nb::xtensor_view``:
 
 .. code-block:: cpp
 
-   // Default (row_major), only accepts C-contiguous 2D arrays
-   m.def("matrix_op", [](const nb::xtensor_view<double, 2>& a) {
+   // Default (dynamic), accepts any 2D array layout
+   m.def("any_matrix", [](const nb::xtensor_view<double, 2>& a) {
+       return xt::sin(a);
+   });
+
+   // Row-major, only accepts C-contiguous 2D arrays
+   m.def("matrix_op", [](const nb::xtensor_view<double, 2, xt::layout_type::row_major>& a) {
        return xt::sin(a);
    });
 
@@ -245,22 +249,18 @@ The same applies to ``nb::xtensor_view``:
        return xt::sin(a);
    });
 
-   // Dynamic, accepts any 2D array layout
-   m.def("any_matrix", [](const nb::xtensor_view<double, 2, xt::layout_type::dynamic>& a) {
-       return xt::sin(a);
-   });
-
 .. note::
 
    For 1-dimensional arrays, ``row_major`` and ``column_major`` are
    equivalent (both have a single stride of 1), so a 1D Fortran-contiguous
    array is accepted by a ``row_major`` view and vice versa. Non-contiguous
-   1D arrays (e.g., ``a[::2]``) are still rejected by non-dynamic views.
+   1D arrays (e.g., ``a[::2]``) are still rejected by strict-layout views.
 
-The default ``row_major`` layout matches NumPy's default C-contiguous order,
-so most NumPy arrays work without any extra configuration. Use
-``column_major`` when interfacing with Fortran-ordered data, and ``dynamic``
-when you need to accept arbitrary strides at the cost of slower iteration.
+The default ``dynamic`` layout accepts any array without restrictions and
+detects the input memory order to enable optimizations when the data is
+contiguous. Use ``row_major`` or ``column_major`` when you want to enforce
+a specific memory order in the function signature and benefit from
+compile-time layout optimizations.
 
 .. _xtensor_lazy_expressions:
 
@@ -272,8 +272,11 @@ like ``a + b`` or ``xt::sin(a) * s + t`` do not compute results immediately,
 they return lightweight expression objects that capture **references** to their
 operands and evaluate on demand.
 
-nanobind includes an ``xexpression`` caster that materializes any lazy
-expression into a concrete ``xt::xarray`` before returning it to Python:
+nanobind includes an ``xexpression`` caster that materializes lazy
+expressions into a NumPy array before returning them to Python. The caster
+matches any type satisfying ``xt::is_xexpression<T>``, which covers
+expression templates (``a + b``, ``xt::sin(a)``, etc.), strided views
+(``xt::strided_view(...)``), and adaptors (``xt::adapt(...)``):
 
 .. code-block:: cpp
 

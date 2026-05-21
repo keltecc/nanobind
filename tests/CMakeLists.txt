@@ -143,7 +143,6 @@ find_package (xtensor NO_MODULE)
 if (TARGET xtl AND TARGET xtensor)
   nanobind_add_module(test_xtensor_ext test_xtensor.cpp ${NB_EXTRA_ARGS})
   target_link_libraries(test_xtensor_ext PRIVATE xtensor xtl)
-  target_compile_features(test_xtensor_ext PRIVATE cxx_std_20)
 endif()
 
 add_library(

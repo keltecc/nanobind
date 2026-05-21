@@ -8,28 +8,39 @@
 NAMESPACE_BEGIN(NB_NAMESPACE)
 NAMESPACE_BEGIN(detail)
 
+/// Caster for zero-copy views (xt::xarray_adaptor / xt::xtensor_adaptor).
+/// Views wrap existing numpy memory without copying.
+///
+/// The input ndarray should match the container static layout.
+/// Mismatched layouts are rejected, since views cannot copy the data.
+/// Dynamic layouts accept any strides.
 template <typename View>
 struct xview_caster {
     using Traits = xcaster_traits<View>;
     using Scalar = typename Traits::scalar_type;
-    using NDArray = ndarray<Scalar, numpy>;
-    using Caster = make_caster<NDArray>;
 
-    /// Compile-time layout from the View type. Determines iteration strategy:
-    /// known layout (row_major / column_major) enables fast flat-pointer iteration,
-    /// dynamic falls back to slower stride-based stepping.
+    /// Compile-time layout from the View type determines iteration strategy.
+    /// The strict layout (row_major / column_major) enables fast iteration,
+    /// dynamic layout falls back to the slower stride-based stepping.
     static constexpr xt::layout_type ViewLayout = View::static_layout;
 
-    static constexpr auto Name = Caster::Name;
+    using NDArray = layout_ndarray<Scalar, ViewLayout>;
+    using NDArrayCaster = make_caster<NDArray>;
+
+    static constexpr auto Name = NDArrayCaster::Name;
     template <typename T_> using Cast = movable_cast_t<T_>;
     template <typename T_> static constexpr bool can_cast() { return true; }
 
-    Caster caster;
+    NDArrayCaster caster;
     std::optional<View> view_;
 
+    explicit operator View*() { return &*view_; }
+    explicit operator View&() { return *view_; }
+    explicit operator View&&() { return (View&&) *view_; }
+
     bool from_python(handle src, uint8_t flags, cleanup_list *cl) noexcept {
-        /// Strip the convert flag: views wrap existing memory without copying,
-        /// so implicit conversions (e.g. int->float) are not supported.
+        /// Disable convert flag. Views wrap existing memory without copying,
+        /// so implicit conversions are not supported.
         if (!caster.from_python(src, flags & ~(uint8_t)cast_flags::convert, cl))
             return false;
 
@@ -42,28 +53,24 @@ struct xview_caster {
         for (size_t i = 0; i < ndim; ++i)
             shape[i] = arr.shape(i);
 
-        xt::layout_type layout = detect_layout(arr);
         if constexpr (ViewLayout != xt::layout_type::dynamic) {
-            /// Known layout: reject mismatched arrays, but allow 1D contiguous
-            /// arrays through (row_major == column_major for 1D).
-            /// Non-contiguous 1D (layout==dynamic) is still rejected.
-            if (layout != ViewLayout && (ndim > 1 || layout == xt::layout_type::dynamic))
-                return false;
-
-            /// adapt<Layout>(..., shape, layout), no strides needed, xtensor
-            /// computes them from shape. This enables flat-pointer iteration.
+            /// Iteration optimization: when the input is contiguous,
+            /// xtensor computes strides from shape.
             view_.emplace(xt::adapt<ViewLayout>(
                 static_cast<Scalar*>(arr.data()), arr.size(),
                 xt::no_ownership(), std::move(shape), ViewLayout));
         } else {
-            /// Dynamic layout: accepts any array. When data is contiguous,
-            /// pass detected layout to enable xtensor's internal optimization.
+            /// When the input is dynamic, we detect the input layout.
+            xt::layout_type layout = detect_layout(arr);
+
             if (layout != xt::layout_type::dynamic) {
+                /// If the array is contiguous, pass the detected layout
+                /// to xtensor to enable its internal optimizations.
                 view_.emplace(xt::adapt<xt::layout_type::dynamic>(
                     static_cast<Scalar*>(arr.data()), arr.size(),
                     xt::no_ownership(), std::move(shape), layout));
             } else {
-                // Non-contiguous: must pass explicit strides.
+                /// When the array is non-contiguous, pass the explicit strides.
                 auto strides = Traits::make_strides(ndim);
                 for (size_t i = 0; i < ndim; ++i)
                     strides[i] = static_cast<int64_t>(arr.stride(i));
@@ -73,12 +80,9 @@ struct xview_caster {
                     xt::no_ownership(), std::move(shape), std::move(strides)));
             }
         }
+
         return true;
     }
-
-    explicit operator View*()  { return &*view_; }
-    explicit operator View&()  { return *view_; }
-    explicit operator View&&() { return (View&&) *view_; }
 
     template <typename T_>
     static handle from_cpp(T_ &&arr, rv_policy policy, cleanup_list *cl) noexcept {
@@ -101,7 +105,7 @@ struct xview_caster {
         if (policy == rv_policy::automatic || policy == rv_policy::automatic_reference)
             policy = rv_policy::reference;
 
-        return Caster::from_cpp(ndarr, policy, cl);
+        return NDArrayCaster::from_cpp(ndarr, policy, cl);
     }
 };
 

@@ -2,6 +2,8 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/xtensor.h>
 #include <xtensor/core/xlayout.hpp>
+#include <xtensor/views/xstrided_view.hpp>
+#include <xtensor/containers/xadapt.hpp>
 
 using complex_t = std::complex<double>;
 
@@ -77,8 +79,30 @@ NB_MODULE(test_xtensor_ext, m) {
         return a + b;
     });
 
+    m.def("test_xarray_row_major_noconvert", [](const xt::xarray<double, xt::layout_type::row_major>& a) {
+        return a * 2.0;
+    }, nb::arg("a").noconvert());
 
-    // xt::xtensor<> tests
+    m.def("test_xarray_column_major_noconvert", [](const xt::xarray<double, xt::layout_type::column_major>& a) {
+        return a * 2.0;
+    }, nb::arg("a").noconvert());
+
+    m.def("test_xarray_dynamic_noconvert", [](const xt::xarray<double, xt::layout_type::dynamic>& a) {
+        return a * 2.0;
+    }, nb::arg("a").noconvert());
+
+    m.def("test_xarray_return_column_major", []() {
+        return xt::xarray<double, xt::layout_type::column_major>{1.0, 2.0, 3.0, 4.0};
+    });
+
+    m.def("test_xarray_mixed_layouts",
+        [](const xt::xarray<double, xt::layout_type::row_major>& a)
+              -> xt::xarray<double, xt::layout_type::column_major> {
+        return a;
+    });
+
+
+    // xt::xtensor tests
 
     m.def("test_xtensor", [](const xt::xtensor<double, 2>& a, const double& s, const double& t) {
         return xt::sin(a) * s + t;
@@ -129,10 +153,44 @@ NB_MODULE(test_xtensor_ext, m) {
         return a + b;
     });
 
+    m.def("test_xtensor_row_major_noconvert_1d", [](const xt::xtensor<double, 1, xt::layout_type::row_major>& a) {
+        return a * 2.0;
+    }, nb::arg("a").noconvert());
 
-    // nb::xarray_view<> tests
+    m.def("test_xtensor_column_major_noconvert_1d", [](const xt::xtensor<double, 1, xt::layout_type::column_major>& a) {
+        return a * 2.0;
+    }, nb::arg("a").noconvert());
+
+    m.def("test_xtensor_row_major_noconvert", [](const xt::xtensor<double, 2, xt::layout_type::row_major>& a) {
+        return a * 2.0;
+    }, nb::arg("a").noconvert());
+
+    m.def("test_xtensor_column_major_noconvert", [](const xt::xtensor<double, 2, xt::layout_type::column_major>& a) {
+        return a * 2.0;
+    }, nb::arg("a").noconvert());
+
+    m.def("test_xtensor_dynamic_noconvert", [](const xt::xtensor<double, 2, xt::layout_type::dynamic>& a) {
+        return a * 2.0;
+    }, nb::arg("a").noconvert());
+
+    m.def("test_xtensor_return_column_major", []() {
+        return xt::xtensor<double, 2, xt::layout_type::column_major>{{1.0, 2.0}, {3.0, 4.0}};
+    });
+
+    m.def("test_xtensor_mixed_layouts",
+        [](const xt::xtensor<double, 2, xt::layout_type::row_major>& a)
+              -> xt::xtensor<double, 2, xt::layout_type::column_major> {
+        return a;
+    });
+
+
+    // nb::xarray_view tests
 
     m.def("test_xarray_view", [](const nb::xarray_view<double>& a, const double& s, const double& t) {
+        return xt::sin(a) * s + t;
+    });
+
+    m.def("test_xarray_view_row_major", [](const nb::xarray_view<double, xt::layout_type::row_major>& a, const double& s, const double& t) {
         return xt::sin(a) * s + t;
     });
 
@@ -173,9 +231,13 @@ NB_MODULE(test_xtensor_ext, m) {
     });
 
 
-    // nb::xtensor_view<> tests
+    // nb::xtensor_view tests
 
     m.def("test_xtensor_view", [](const nb::xtensor_view<double, 2>& a, const double& s, const double& t) {
+        return xt::sin(a) * s + t;
+    });
+
+    m.def("test_xtensor_view_row_major", [](const nb::xtensor_view<double, 2, xt::layout_type::row_major>& a, const double& s, const double& t) {
         return xt::sin(a) * s + t;
     });
 
@@ -223,6 +285,25 @@ NB_MODULE(test_xtensor_ext, m) {
     m.def("test_vectorize_lambda", nb::xvectorize([](double x) {
         return std::sin(x);
     }));
+
+
+    // strided_view + adaptor tests
+
+    m.def("test_strided_view_return", []() {
+        return xt::strided_view(static_array, {xt::range(0, 3, 2)});
+    });
+
+    m.def("test_xarray_adaptor_return", []() {
+        static double buf[6] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+        std::vector<size_t> shape = {2, 3};
+        return xt::adapt(&buf[0], 6, xt::no_ownership(), shape);
+    });
+
+    m.def("test_xtensor_adaptor_return", []() {
+        static double buf[4] = {10.0, 20.0, 30.0, 40.0};
+        std::array<size_t, 2> shape = {2, 2};
+        return xt::adapt(&buf[0], shape);
+    });
 
 
     // reference_internal tests
